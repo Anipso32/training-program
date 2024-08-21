@@ -3,7 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>12-Week Program Progress Tracker</title>
+    <title>Progress Tracker with Google Sign-In</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyANYh_UuAOiSvqi7VcGtKjrUGIkKQzwfvg",
+            authDomain: "progress-tracker-adc18.firebaseapp.com",
+            projectId: "progress-tracker-adc18",
+            storageBucket: "progress-tracker-adc18.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdefgh1234567"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Function to handle Google Sign-In
+        function googleSignIn() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider)
+                .then((result) => {
+                    console.log('User signed in:', result.user);
+                    updateUI(result.user);
+                })
+                .catch((error) => {
+                    console.error('Sign in error:', error);
+                    alert('Sign in failed: ' + error.message);
+                });
+        }
+
+        // Function to handle Sign-Out
+        function signOut() {
+            firebase.auth().signOut()
+                .then(() => {
+                    console.log('User signed out');
+                    updateUI(null);
+                })
+                .catch((error) => {
+                    console.error('Sign out error:', error);
+                    alert('Sign out failed: ' + error.message);
+                });
+        }
+
+        // Function to update the UI based on user's authentication state
+        function updateUI(user) {
+            const userDetails = document.getElementById('userDetails');
+            if (user) {
+                userDetails.textContent = `Signed in as ${user.displayName}`;
+                document.getElementById('googleSignIn').style.display = 'none';
+                document.getElementById('signOut').style.display = 'inline';
+                document.getElementById('tracker').style.display = 'block';
+            } else {
+                userDetails.textContent = 'You are not signed in';
+                document.getElementById('googleSignIn').style.display = 'inline';
+                document.getElementById('signOut').style.display = 'none';
+                document.getElementById('tracker').style.display = 'none';
+            }
+        }
+
+        // Check the user's authentication state when the page loads
+        firebase.auth().onAuthStateChanged((user) => {
+            updateUI(user);
+        });
+
+        // Function to save progress and update the chart
+        function saveProgress() {
+            const week = document.getElementById('week').value;
+            const day = document.getElementById('day').value;
+            const exercise = document.getElementById('exercise').value;
+            const sets = document.getElementById('sets').value;
+            const reps = document.getElementById('reps').value;
+            const weight = document.getElementById('weight').value;
+
+            const newEntry = { week, day, exercise, sets, reps, weight };
+
+            let progressData = JSON.parse(localStorage.getItem('progressData')) || [];
+            progressData.push(newEntry);
+            localStorage.setItem('progressData', JSON.stringify(progressData));
+
+            displayProgress();
+            updateChart();
+
+            document.getElementById('week').value = '';
+            document.getElementById('day').value = '';
+            document.getElementById('exercise').value = '';
+            document.getElementById('sets').value = '';
+            document.getElementById('reps').value = '';
+            document.getElementById('weight').value = '';
+        }
+
+        // Function to display saved progress
+        function displayProgress() {
+            const progressData = JSON.parse(localStorage.getItem('progressData')) || [];
+            const progress = document.getElementById('progress');
+            progress.innerHTML = '';
+
+            progressData.forEach(entry => {
+                const entryText = `Week ${entry.week}, Day: ${entry.day}, Exercise: ${entry.exercise}, Sets: ${entry.sets}, Reps: ${entry.reps}, Weight: ${entry.weight} lbs`;
+                const newEntry = document.createElement('p');
+                newEntry.textContent = entryText;
+                progress.appendChild(newEntry);
+            });
+        }
+
+        // Function to update the chart based on saved progress
+        function updateChart() {
+            const progressData = JSON.parse(localStorage.getItem('progressData')) || [];
+            const weeks = progressData.map(entry => entry.week);
+            const weights = progressData.map(entry => entry.weight);
+
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: weeks,
+                    datasets: [{
+                        label: 'Weight Lifted (lbs)',
+                        data: weights,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { beginAtZero: true },
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Load progress and update chart on page load
+        window.onload = function() {
+            displayProgress();
+            updateChart();
+        };
+    </script>
+    
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -48,125 +191,48 @@
             margin-top: 30px;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <h1>Progress Tracker with Google Sign-In</h1>
 
-<div class="container">
-    <h1>12-Week Program Progress Tracker</h1>
+    <!-- User Details -->
+    <p id="userDetails">You are not signed in</p>
 
-    <div class="exercise">
-        <label for="week">Week:</label>
-        <input type="number" id="week" name="week" min="1" max="12">
+    <!-- Google Sign-In Button -->
+    <button id="googleSignIn" onclick="googleSignIn()">Sign in with Google</button>
 
-        <label for="day">Day:</label>
-        <input type="text" id="day" name="day" placeholder="e.g., Monday">
+    <!-- Sign-Out Button -->
+    <button id="signOut" style="display:none;" onclick="signOut()">Sign out</button>
 
-        <label for="exercise">Exercise:</label>
-        <input type="text" id="exercise" name="exercise" placeholder="e.g., Bench Press">
+    <!-- Progress Tracker (hidden until signed in) -->
+    <div id="tracker" class="container" style="display:none;">
+        <h2>Track Your Workout Progress</h2>
+        <div class="exercise">
+            <label for="week">Week:</label>
+            <input type="number" id="week" name="week" min="1" max="12">
 
-        <label for="sets">Sets:</label>
-        <input type="number" id="sets" name="sets" min="1">
+            <label for="day">Day:</label>
+            <input type="text" id="day" name="day" placeholder="e.g., Monday">
 
-        <label for="reps">Reps:</label>
-        <input type="number" id="reps" name="reps" min="1">
+            <label for="exercise">Exercise:</label>
+            <input type="text" id="exercise" name="exercise" placeholder="e.g., Bench Press">
 
-        <label for="weight">Weight (lbs):</label>
-        <input type="number" id="weight" name="weight" min="0" step="0.5">
+            <label for="sets">Sets:</label>
+            <input type="number" id="sets" name="sets" min="1">
+
+            <label for="reps">Reps:</label>
+            <input type="number" id="reps" name="reps" min="1">
+
+            <label for="weight">Weight (lbs):</label>
+            <input type="number" id="weight" name="weight" min="0" step="0.5">
+        </div>
+
+        <button onclick="saveProgress()">Save Progress</button>
+
+        <h2>Progress:</h2>
+        <div id="progress"></div>
+
+        <canvas id="progressChart" width="400" height="200"></canvas>
     </div>
-
-    <button onclick="saveProgress()">Save Progress</button>
-
-    <h2>Progress:</h2>
-    <div id="progress"></div>
-
-    <canvas id="progressChart" width="400" height="200"></canvas>
-</div>
-
-<script>
-    function saveProgress() {
-        const week = document.getElementById('week').value;
-        const day = document.getElementById('day').value;
-        const exercise = document.getElementById('exercise').value;
-        const sets = document.getElementById('sets').value;
-        const reps = document.getElementById('reps').value;
-        const weight = document.getElementById('weight').value;
-
-        const newEntry = {
-            week,
-            day,
-            exercise,
-            sets,
-            reps,
-            weight
-        };
-
-        let progressData = JSON.parse(localStorage.getItem('progressData')) || [];
-        progressData.push(newEntry);
-        localStorage.setItem('progressData', JSON.stringify(progressData));
-
-        displayProgress();
-        updateChart();
-
-        document.getElementById('week').value = '';
-        document.getElementById('day').value = '';
-        document.getElementById('exercise').value = '';
-        document.getElementById('sets').value = '';
-        document.getElementById('reps').value = '';
-        document.getElementById('weight').value = '';
-    }
-
-    function displayProgress() {
-        const progressData = JSON.parse(localStorage.getItem('progressData')) || [];
-        const progress = document.getElementById('progress');
-        progress.innerHTML = '';
-
-        progressData.forEach(entry => {
-            const entryText = `Week ${entry.week}, Day: ${entry.day}, Exercise: ${entry.exercise}, Sets: 
-${entry.sets}, Reps: ${entry.reps}, Weight: ${entry.weight} lbs`;
-            const newEntry = document.createElement('p');
-            newEntry.textContent = entryText;
-            progress.appendChild(newEntry);
-        });
-    }
-
-    function updateChart() {
-        const progressData = JSON.parse(localStorage.getItem('progressData')) || [];
-        const weeks = progressData.map(entry => entry.week);
-        const weights = progressData.map(entry => entry.weight);
-
-        const ctx = document.getElementById('progressChart').getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: weeks,
-                datasets: [{
-                    label: 'Weight Lifted (lbs)',
-                    data: weights,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 2,
-                    fill: false
-                }]
-            },
-            options: {
-                scales: {
-                    x: {
-                        beginAtZero: true
-                    },
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    }
-
-    window.onload = function() {
-        displayProgress();
-        updateChart();
-    };
-</script>
-
 </body>
 </html>
-
