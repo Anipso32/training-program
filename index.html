@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12-Week Program Progress Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .exercise {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        canvas {
+            margin-top: 30px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>12-Week Program Progress Tracker</h1>
+
+    <div class="exercise">
+        <label for="week">Week:</label>
+        <input type="number" id="week" name="week" min="1" max="12">
+
+        <label for="day">Day:</label>
+        <input type="text" id="day" name="day" placeholder="e.g., Monday">
+
+        <label for="exercise">Exercise:</label>
+        <input type="text" id="exercise" name="exercise" placeholder="e.g., Bench Press">
+
+        <label for="sets">Sets:</label>
+        <input type="number" id="sets" name="sets" min="1">
+
+        <label for="reps">Reps:</label>
+        <input type="number" id="reps" name="reps" min="1">
+
+        <label for="weight">Weight (lbs):</label>
+        <input type="number" id="weight" name="weight" min="0" step="0.5">
+    </div>
+
+    <button onclick="saveProgress()">Save Progress</button>
+
+    <h2>Progress:</h2>
+    <div id="progress"></div>
+
+    <canvas id="progressChart" width="400" height="200"></canvas>
+</div>
+
+<script>
+    function saveProgress() {
+        const week = document.getElementById('week').value;
+        const day = document.getElementById('day').value;
+        const exercise = document.getElementById('exercise').value;
+        const sets = document.getElementById('sets').value;
+        const reps = document.getElementById('reps').value;
+        const weight = document.getElementById('weight').value;
+
+        const newEntry = {
+            week,
+            day,
+            exercise,
+            sets,
+            reps,
+            weight
+        };
+
+        let progressData = JSON.parse(localStorage.getItem('progressData')) || [];
+        progressData.push(newEntry);
+        localStorage.setItem('progressData', JSON.stringify(progressData));
+
+        displayProgress();
+        updateChart();
+
+        document.getElementById('week').value = '';
+        document.getElementById('day').value = '';
+        document.getElementById('exercise').value = '';
+        document.getElementById('sets').value = '';
+        document.getElementById('reps').value = '';
+        document.getElementById('weight').value = '';
+    }
+
+    function displayProgress() {
+        const progressData = JSON.parse(localStorage.getItem('progressData')) || [];
+        const progress = document.getElementById('progress');
+        progress.innerHTML = '';
+
+        progressData.forEach(entry => {
+            const entryText = `Week ${entry.week}, Day: ${entry.day}, Exercise: ${entry.exercise}, Sets: 
+${entry.sets}, Reps: ${entry.reps}, Weight: ${entry.weight} lbs`;
+            const newEntry = document.createElement('p');
+            newEntry.textContent = entryText;
+            progress.appendChild(newEntry);
+        });
+    }
+
+    function updateChart() {
+        const progressData = JSON.parse(localStorage.getItem('progressData')) || [];
+        const weeks = progressData.map(entry => entry.week);
+        const weights = progressData.map(entry => entry.weight);
+
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: weeks,
+                datasets: [{
+                    label: 'Weight Lifted (lbs)',
+                    data: weights,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    window.onload = function() {
+        displayProgress();
+        updateChart();
+    };
+</script>
+
+</body>
+</html>
+
